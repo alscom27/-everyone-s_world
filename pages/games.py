@@ -10,7 +10,7 @@ def show_game_list():
     user = get_user_info()
     if not user:
         st.warning("로그인이 필요합니다.")
-        switch_page("login")
+        st.session_state.page = "login"
         return
 
     st.title("게임 목록")
@@ -29,4 +29,4 @@ def show_game_list():
     for game in games:
         text_feedback(game.title, game.thumbnail_path)
         if st.button(f"{game.title} 시작하기", key=game.id):
-            switch_page(game.title)
+            st.session_state.page = game.title
