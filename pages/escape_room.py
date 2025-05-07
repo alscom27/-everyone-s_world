@@ -11,6 +11,7 @@ from utils.voice import (
     play_audio,
     record_audio,
     delete_audio_file,
+    analyze_image_with_vision,
 )
 from components.game_stage import create_stage_and_update_progress, is_game_cleared
 
@@ -118,6 +119,11 @@ def show_escape_room():
     )
     st.markdown(stage["description"])
 
+    if user.disability_type not in ["시각", "지체"]:
+        if st.button("힌트"):
+            hint = analyze_image_with_vision(db, game.id, user.id)
+            st.markdown(f"**힌트:** {hint}")
+
     command = ""
     if user.disability_type in ["시각", "지체"]:
         desc_audio = text_to_speech(stage["description"])
@@ -149,10 +155,19 @@ def show_escape_room():
 
     if command:
         st.success(f"입력된 명령: {command}")
-        stage = create_stage_and_update_progress(db, user.id, game, command)
-        st.session_state["current_stage"] = stage_to_dict(stage)
-        st.session_state.pop("command_input", None)
-        st.rerun()
+        if user.disability_type in ["시각", "지체"] and (
+            "힌트" in command or "도움" in command
+        ):
+            hint = analyze_image_with_vision(db, game.id, user.id)
+            st.markdown(f"**힌트:** {hint}")
+            hint_audio = text_to_speech(hint)
+            play_audio(hint_audio)
+            delete_audio_file(hint_audio)
+        else:
+            stage = create_stage_and_update_progress(db, user.id, game, command)
+            st.session_state["current_stage"] = stage_to_dict(stage)
+            st.session_state.pop("command_input", None)
+            st.rerun()
 
     if st.button("현재 단계 저장하기"):
         progress = (

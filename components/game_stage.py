@@ -1,15 +1,46 @@
 from datetime import datetime
 from models.game_stage import GameStage
 from models.game_progress import GameProgress
+from models.user import User
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
+import requests
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-def generate_room_image(prompt: str):
+# def generate_room_image(prompt: str, user_login_id: str):
+#     response = client.images.generate(
+#         model="dall-e-3",
+#         prompt=prompt,
+#         size="1024x1024",
+#         quality="standard",
+#         n=1,
+#     )
+
+#     image_url = response.data[0].url
+
+#     # 이미지 로컬 저장
+#     image_dir = "assets/images"
+#     os.makedirs(image_dir, exist_ok=True)
+#     image_filename = os.path.join(image_dir, f"escaperoom_{user_login_id}.png")
+#     image_path = os.path.join(image_dir, image_filename)
+
+#     try:
+#         # URL에서 이미지 데이터를 가져와 로컬 파일로 저장
+#         img_data = requests.get(image_url).content
+#         with open(image_path, "wb") as f:
+#             f.write(img_data)
+#         print(f"이미지 저장 완료: {image_path}")
+#     except Exception as e:
+#         print(f"이미지 저장 실패: {e}")
+#         return None
+
+
+#     return response.data[0].url
+def generate_room_image(prompt: str, user_login_id: str):
     response = client.images.generate(
         model="dall-e-3",
         prompt=prompt,
@@ -17,7 +48,33 @@ def generate_room_image(prompt: str):
         quality="standard",
         n=1,
     )
-    return response.data[0].url
+
+    image_url = response.data[0].url if response and response.data else None
+
+    if not image_url:
+        print("DALL·E 이미지 URL을 가져오지 못했습니다.")
+        return None
+
+    # 이미지 로컬 저장 경로 설정
+    image_dir = "assets/images"
+    os.makedirs(image_dir, exist_ok=True)
+
+    # 파일명 형식: escaperoom_{user_login_id}.png
+    image_filename = f"escaperoom_{user_login_id}.png"
+    image_path = os.path.join(image_dir, image_filename)
+
+    try:
+        # URL에서 이미지 데이터를 가져와 로컬 파일로 저장
+        img_data = requests.get(image_url).content
+        with open(image_path, "wb") as f:
+            f.write(img_data)
+        print(f"이미지 저장 완료: {image_path}")
+    except Exception as e:
+        print(f"이미지 저장 실패: {e}")
+        return None
+
+    # 로컬 파일 경로 반환
+    return image_path
 
 
 def create_stage_and_update_progress(db, user_id: int, game, user_command: str):
@@ -81,8 +138,10 @@ def create_stage_and_update_progress(db, user_id: int, game, user_command: str):
         ],
     )
 
+    user = db.query(User).filter_by(id=user_id).first()
+
     description = res.choices[0].message.content.strip()
-    image_url = generate_room_image(description[:100])
+    image_url = generate_room_image(description[:100], user.id)
 
     new_stage = GameStage(
         game_id=game.id,

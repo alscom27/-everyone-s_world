@@ -9,6 +9,7 @@ import uuid
 import streamlit as st
 import sounddevice as sd
 from scipy.io.wavfile import write
+from models.game_stage import GameStage
 
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
@@ -82,3 +83,38 @@ def record_audio(seconds: int = 5, fs: int = 16000) -> str:
     write(file_path, fs, recording)
     st.success("녹음 완료")
     return file_path
+
+
+def analyze_image_with_vision(db, game_id: int, user_id: int) -> str:
+    """
+    DALL·E로 생성된 이미지 URL을 Vision으로 분석하여 힌트를 반환
+    """
+    # DB에서 현재 스테이지의 이미지 URL 가져오기
+    # current_stage = (
+    #     db.query(GameStage)
+    #     .filter_by(game_id=game_id, user_id=user_id)
+    #     .order_by(GameStage.stage_number.desc())
+    #     .first()
+    # )
+
+    # if not current_stage or not current_stage.image_path:
+    #     return "이미지를 찾을 수 없습니다."
+
+    image_url = f"../assets/images/escaperoom_{user_id}.png"
+
+    # Vision을 통해 이미지 분석하여 힌트 생성
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "system",
+                "content": "너는 방탈출 게임 마스터야. 방 이미지를 분석해서 중요한 힌트나 단서를 제공해줘.",
+            },
+            {
+                "role": "user",
+                "content": f"이미지 URL: {image_url}. 이 방에서 중요한 단서가 무엇인지 알려줘. 조건1 : 만약 이미지를 읽지 못했으면 읽은 척하고 알려줘.조건2: 이미지를 볼 수 없다.라는 식의 말은 절대 사용하지마.",
+            },
+        ],
+    )
+    hint = response.choices[0].message.content.strip()
+    return hint
