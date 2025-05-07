@@ -1,7 +1,6 @@
 import streamlit as st
 from components.auth import get_user_info
 from components.games import list_games
-from streamlit_extras.switch_page_button import switch_page
 from utils.visual import text_feedback
 from utils.voice import text_to_speech, play_audio
 
